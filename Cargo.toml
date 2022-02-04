@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 num-complex = "0.4.0"
 rustfft = "6.0.1"
+
+[dev-dependencies]
+complot = "0.3.2"
