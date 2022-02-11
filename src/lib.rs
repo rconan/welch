@@ -15,15 +15,15 @@
 use num_complex::Complex;
 use rustfft::FftPlanner;
 
-pub struct Welch {
+pub struct Welch<'a> {
     pub n_segment: usize,
     pub overlap: f64,
     pub segment_size: usize,
-    pub signal: Vec<f64>,
+    pub signal: &'a Vec<f64>,
 }
 
-impl Welch {
-    pub fn new(n_segment: usize, overlap: f64, signal: Vec<f64>) -> Self {
+impl<'a> Welch<'a> {
+    pub fn new(n_segment: usize, overlap: f64, signal: &'a Vec<f64>) -> Self {
         let l =
             (signal.len() as f64 / (n_segment as f64 * (1. - overlap) + overlap)).trunc() as usize;
         Self {

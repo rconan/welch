@@ -21,8 +21,10 @@ fn main() {
     )
         .into();
 
-    let welch = Welch::new(4, 0.5, signal);
+    let welch = Welch::new(4, 0.5, &signal);
     let psd = welch.periogram();
+
+    let sum_sqr = signal.into_iter().map(|x| x * x).sum::<f64>();
 
     let freq: Vec<_> = (0..psd.len())
         .map(|i| i as f64 * sampling_frequency)
