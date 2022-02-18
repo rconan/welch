@@ -1,4 +1,28 @@
-use welch::Welch;
+use std::fmt::Display;
+use welch::{Welch, Window};
+
+#[derive(Debug)]
+pub struct One {
+    weights: Vec<f64>,
+}
+impl Window for One {
+    fn new(n: usize) -> Self {
+        Self {
+            weights: vec![1f64; n],
+        }
+    }
+    fn weights(&self) -> &[f64] {
+        self.weights.as_slice()
+    }
+}
+impl One {
+    pub fn next(&self) {}
+}
+impl Display for One {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "I am the One")
+    }
+}
 
 fn main() {
     // sin(2\pi i f0 / sampling_frequency) i: [0 , sampling_frequency/f0]
@@ -21,7 +45,8 @@ fn main() {
     )
         .into();
 
-    let welch = Welch::new(4, 0.5, &signal);
+    let welch = Welch::<One>::new(4, 0.5, &signal);
+    println!("{welch:}");
     let psd = welch.periogram();
 
     let sum_sqr = signal.into_iter().map(|x| x * x).sum::<f64>();

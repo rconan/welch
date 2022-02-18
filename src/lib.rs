@@ -12,17 +12,33 @@
 //!
 //! signal length: n = kl - (k-1)la = l(k(1-a)+a), so l = n/(k(1-a)+a)
 
+use std::fmt::Display;
+
 use num_complex::Complex;
 use rustfft::FftPlanner;
 
-pub struct Welch<'a> {
+pub trait Window {
+    fn new(n: usize) -> Self;
+    fn weights(&self) -> &[f64];
+}
+
+#[derive(Debug)]
+pub struct Welch<'a, W: Window + Display> {
     pub n_segment: usize,
     pub overlap: f64,
     pub segment_size: usize,
     pub signal: &'a Vec<f64>,
+    pub window: W,
 }
 
-impl<'a> Welch<'a> {
+impl<'a, W: Window + Display> Display for Welch<'a, W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "# of segments {:}", self.n_segment)?;
+        writeln!(f, "# window {:}", self.window)
+    }
+}
+
+impl<'a, W: Window + Display> Welch<'a, W> {
     pub fn new(n_segment: usize, overlap: f64, signal: &'a Vec<f64>) -> Self {
         let l =
             (signal.len() as f64 / (n_segment as f64 * (1. - overlap) + overlap)).trunc() as usize;
@@ -31,19 +47,22 @@ impl<'a> Welch<'a> {
             overlap,
             segment_size: l,
             signal,
+            window: W::new(l),
         }
     }
     pub fn segmenting(&self) -> Vec<Complex<f64>> {
         let l = self.segment_size;
         let a = self.overlap;
         let nel = l - (l as f64 * a).round() as usize;
+        //let weights = vec![1.; self.segment_size];
         self.signal
             .windows(self.segment_size)
             .step_by(nel)
             .map(|segment| {
                 segment
                     .iter()
-                    .map(|x| Complex::new(*x, 0f64))
+                    .zip(self.window.weights().iter())
+                    .map(|(x, w)| Complex::new(*x * *w, 0f64))
                     .collect::<Vec<Complex<f64>>>()
             })
             .flatten()
