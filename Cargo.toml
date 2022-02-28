@@ -11,3 +11,5 @@ rustfft = "6.0.1"
 
 [dev-dependencies]
 complot = "0.3.2"
+rand = "0.8.5"
+rand_distr = "0.4.3"

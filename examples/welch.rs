@@ -1,3 +1,4 @@
+use rand_distr::{Distribution, Normal};
 use std::fmt::Display;
 use welch::{Welch, Window};
 
@@ -29,8 +30,14 @@ fn main() {
     let sampling_frequency = 5_000f64; // 1_000
     let f0 = 150f64;
     let n_step = 10 * (sampling_frequency / f0) as usize;
+
+    let normal = Normal::new(0.0, 0.1).unwrap();
+
     let signal: Vec<_> = (0..n_step)
-        .map(|i| (2f64 * std::f64::consts::PI * i as f64 * f0 / sampling_frequency).sin())
+        .map(|i| {
+            (2f64 * std::f64::consts::PI * i as f64 * f0 / sampling_frequency).sin()
+                + normal.sample(&mut rand::thread_rng())
+        })
         .collect();
 
     let tau = sampling_frequency.recip(); // 1/sampling_frequency
@@ -45,7 +52,10 @@ fn main() {
     )
         .into();
 
-    let welch = Welch::<One>::new(4, 0.5, &signal);
+    let welch = Welch::<One>::builder(&signal)
+        .n_segment(6)
+        .overlap(0.25)
+        .build::<One>();
     println!("{welch:}");
     let psd = welch.periogram();
 

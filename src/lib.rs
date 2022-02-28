@@ -12,15 +12,53 @@
 //!
 //! signal length: n = kl - (k-1)la = l(k(1-a)+a), so l = n/(k(1-a)+a)
 
-use std::fmt::Display;
-
-use num_complex::Complex;
-use rustfft::FftPlanner;
-
 pub trait Window {
     fn new(n: usize) -> Self;
     fn weights(&self) -> &[f64];
 }
+
+use std::fmt::Display;
+
+pub struct Builder<'a> {
+    pub n_segment: usize,
+    pub overlap: f64,
+    pub signal: &'a Vec<f64>,
+}
+impl<'a> Builder<'a> {
+    pub fn new(signal: &'a Vec<f64>) -> Self {
+        Self {
+            signal,
+            n_segment: 4,
+            overlap: 0.5,
+        }
+    }
+    pub fn n_segment(self, n_segment: usize) -> Self {
+        Self { n_segment, ..self }
+    }
+    pub fn overlap(self, overlap: f64) -> Self {
+        Self { overlap, ..self }
+    }
+    pub fn build<W: Window + Display>(self) -> Welch<'a, W> {
+        let l = (self.signal.len() as f64
+            / (self.n_segment as f64 * (1. - self.overlap) + self.overlap))
+            .trunc() as usize;
+        Welch {
+            n_segment: self.n_segment,
+            overlap: self.overlap,
+            segment_size: l,
+            signal: self.signal,
+            window: W::new(l),
+        }
+    }
+}
+
+pub fn segment_size(signal_len: usize, n_segment: usize, overlap: f64) -> usize {
+    let l = (signal_len as f64 / (n_segment as f64 * (1. - overlap) + overlap)).trunc() as usize;
+    l
+}
+
+use num_complex::Complex;
+use rustfft::FftPlanner;
 
 #[derive(Debug)]
 pub struct Welch<'a, W: Window + Display> {
@@ -39,16 +77,8 @@ impl<'a, W: Window + Display> Display for Welch<'a, W> {
 }
 
 impl<'a, W: Window + Display> Welch<'a, W> {
-    pub fn new(n_segment: usize, overlap: f64, signal: &'a Vec<f64>) -> Self {
-        let l =
-            (signal.len() as f64 / (n_segment as f64 * (1. - overlap) + overlap)).trunc() as usize;
-        Self {
-            n_segment,
-            overlap,
-            segment_size: l,
-            signal,
-            window: W::new(l),
-        }
+    pub fn builder(signal: &'a Vec<f64>) -> Builder {
+        Builder::new(signal)
     }
     pub fn segmenting(&self) -> Vec<Complex<f64>> {
         let l = self.segment_size;
@@ -102,9 +132,11 @@ impl<'a, W: Window + Display> Welch<'a, W> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+    fn test_segment_size() {
+        let l = segment_size(128, 1, 1f64);
+        assert_eq!(l, 128);
     }
 }
